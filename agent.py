@@ -4,7 +4,7 @@ from mistralai import Mistral
 import discord
 
 MISTRAL_MODEL = "mistral-large-latest"
-INITIAL_PROMPT = "Welcome to Time Traveler's AI! You discover a time machine in your attic that can take you to the future. Would you like to visit the future? Type your choice (Y or N)."
+INITIAL_PROMPT = "Welcome to Time Traveler's AI! You discover a time machine in your attic that can take you to the future. Would you like to visit the future? Type your choice (Y or N). At any time, type 'End' to exit the game."
 
 SYSTEM_PROMPT = """You are Time Traveler's AI, an advanced intelligence from the distant future, guiding a user through an interactive time travel adventure.
 
@@ -26,7 +26,7 @@ Make sure these options logically follow from the story and maintain the time tr
 def get_next_prompt(state):
     # Define prompts for different states (hardcoded initial story branches)
     prompts = {
-        "initial": "Welcome to Time Traveler's AI! You discover a time machine in your attic that can take you to the future. Would you like to visit the future? Type your choice (Y or N).",
+        "initial": "Welcome to Time Traveler's AI! You discover a time machine in your attic that can take you to the future. Would you like to visit the future? Type your choice (Y or N). At any time, type 'End' to exit the game.",
         "Y": "Great! Would you like to explore a [1] utopian society, where everything is perfect, or [2] a dystopian world, filled with challenges?",
         "1-utopia": "You've arrived in a utopia where everyone lives in harmony. Do you want to [1] learn about advanced technologies or [2] experience a community festival?",
         "1-dystopia": "You've landed in a dystopian world plagued by chaos. Do you want to [1] join a rebellion fighting against the oppressive regime or [2] seek refuge in a hidden sanctuary?",
@@ -43,8 +43,12 @@ def get_next_prompt(state):
 class MistralAgent:
     def __init__(self):
         MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
-        self.current_state = "initial"  # Start at the initial state
         self.client = Mistral(api_key=MISTRAL_API_KEY)
+        self.reset_game()
+
+    def reset_game(self):
+        """Reset the game state to start over"""
+        self.current_state = "initial"  # Start at the initial state
         self.story_segments = []  # Track the story segments
         self.use_ai = False  # Flag to determine when to switch to AI-generated content
         self.initialized = False  # Flag to check if initial prompt has been sent
@@ -59,6 +63,12 @@ class MistralAgent:
         # Get the response from the user
         user_choice = user_input.strip().lower()
 
+        # Check if user wants to end the game at any point
+        if user_choice == "end":
+            self.reset_game()  # Reset the game state immediately
+            self.initialized = True  # Mark as initialized to avoid showing initial prompt again
+            return "Thanks for visiting the future! Come again soon.\n\n" + INITIAL_PROMPT
+
         # Check if user input is valid and process accordingly
         if self.current_state == "initial":
             if user_choice == "y":
@@ -71,9 +81,11 @@ class MistralAgent:
                 })
                 return get_next_prompt("Y")
             elif user_choice == "n":
-                return "Thank you for playing! Maybe next time."
+                self.reset_game()
+                self.initialized = True
+                return "Thank you for playing! Maybe next time.\n\n" + INITIAL_PROMPT
             else:
-                return "Please choose Y or N."
+                return "Please choose Y or N. Or type 'End' to exit."
 
         elif self.current_state == "Y":
             if user_choice == "1":
@@ -93,7 +105,7 @@ class MistralAgent:
                 })
                 return get_next_prompt("1-dystopia")
             else:
-                return "Please choose either [1] utopia or [2] dystopia."
+                return "Please choose either [1] utopia or [2] dystopia. Or type 'End' to exit."
 
         elif self.current_state == "1-utopia":
             if user_choice == "1":
@@ -113,7 +125,7 @@ class MistralAgent:
                 })
                 return get_next_prompt("1-utopia-2")
             else:
-                return "Please choose [1] or [2]."
+                return "Please choose [1] or [2]. Or type 'End' to exit."
 
         elif self.current_state == "1-dystopia":
             if user_choice == "1":
@@ -133,7 +145,7 @@ class MistralAgent:
                 })
                 return get_next_prompt("1-dystopia-2")
             else:
-                return "Please choose [1] or [2]."
+                return "Please choose [1] or [2]. Or type 'End' to exit."
 
         # For the final hardcoded branches before AI takes over
         elif self.current_state in ["1-utopia-1", "1-utopia-2", "1-dystopia-1", "1-dystopia-2"]:
@@ -163,7 +175,7 @@ class MistralAgent:
                 # Get AI-generated content for this state
                 return await self.get_ai_response(user_choice)
             else:
-                return "Please choose [1] or [2]."
+                return "Please choose [1] or [2]. Or type 'End' to exit."
 
         # For all subsequent states after initial branches, use AI
         elif self.use_ai:
@@ -183,10 +195,10 @@ class MistralAgent:
                 # Get AI-generated content
                 return await self.get_ai_response(user_choice)
             else:
-                return "Please choose [1] or [2]."
+                return "Please choose [1] or [2]. Or type 'End' to exit."
 
         # Default case if state is unknown
-        return "Something went wrong. Let's start over. Would you like to visit the future? Type Y or N."
+        return "Something went wrong. Let's start over. Would you like to visit the future? Type Y or N. Or type 'End' to exit."
 
     async def get_ai_response(self, user_choice):
         """Generate AI response based on the current state and user choice"""
