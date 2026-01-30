@@ -16,7 +16,7 @@ The bot was deployed in the CS153 Discord server and manages an entire interacti
 - Use hardcoded early branches for deterministic grounding, and then automatically transitions to fully LLM-generated content after initial arcs  
 - Maintains story continuity through a tracked memory buffer
 
-### 🤖 Custom Mistral Agent (core engine I built)  
+### 🤖 Custom Mistral Agent
 - Built an async wrapper around Mistral’s `chat.complete_async` API  
 - Engineered a structured system prompt enforcing narrative constraints with two-option branching at every step  
 - Dynamically injects state, user choice, and recent story context
